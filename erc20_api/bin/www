@@ -1,0 +1,192 @@
+#!/usr/bin/env node
+/**
+ * Module dependencies.
+ */
+var app = require("../app");
+var cluster = require("cluster");
+var debug = require("debug")("app:server");
+var http = require("http");
+var numCPUs = process.env.CPU_NUM || require("os").cpus().length;
+
+const Web3WsProvider = require("web3-providers-ws");
+var Web3 = require("web3");
+
+/**
+ * Web3
+ */
+
+const options = {
+  timeout: 30000, // ms
+
+  clientConfig: {
+    // Useful if requests are large
+    maxReceivedFrameSize: 100000000, // bytes - default: 1MiB
+    maxReceivedMessageSize: 100000000, // bytes - default: 8MiB
+
+    // Useful to keep a connection alive
+    keepalive: true,
+    keepaliveInterval: 60000, // ms
+  },
+
+  // Enable auto reconnection
+  reconnect: {
+    auto: true,
+    delay: 5000, // ms
+    maxAttempts: 5,
+    onTimeout: false,
+  },
+};
+const ws = new Web3WsProvider(process.env.RPC_URL, options);
+const web3 = new Web3(ws);
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || "3000");
+app.set("port", port);
+
+if (cluster.isMaster) {
+  // Fork workers.
+  for (var i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
+
+  // If a worker dies, log it to the console and start another worker.
+  cluster.on("exit", function (worker, code, signal) {
+    console.log("Worker " + worker.process.pid + " died.");
+    cluster.fork();
+  });
+
+  // Log when a worker starts listening
+  cluster.on("listening", function (worker, address) {
+    console.log("Worker started with PID " + worker.process.pid + ".");
+  });
+} else {
+  /**
+   * Create HTTP server.
+   */
+
+  var server = http.createServer(app);
+
+  /**
+   * Listen on provided port, on all network interfaces.
+   */
+
+  server.listen(port);
+  server.on("error", onError);
+  // server.on('listening', onListening);
+}
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== "listen") {
+    throw error;
+  }
+
+  var bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case "EACCES":
+      console.error(bind + " requires elevated privileges");
+      process.exit(1);
+      break;
+    case "EADDRINUSE":
+      console.error(bind + " is already in use");
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for uncaughtException
+ */
+process.on("uncaughtException", function (err) {
+  //예상치 못한 예외 처리
+  _logger.error("uncaughtException : " + err);
+});
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+function onListening() {
+  var local = server.address();
+  var bind = typeof local === "string" ? "pipe " + local : "port " + local.port;
+  debug("Listening on " + bind);
+
+  // var subscription = web3.eth.subscribe('pendingTransactions', function(error, result){
+  // 		if (!error)
+  // 				console.log(result);
+  // })
+  // .on("data", function(transaction){
+  // 		console.log(transaction);
+  // });
+
+  let sellNftSubscription = web3.eth.subscribe(
+    "logs",
+    {
+      fromBlock: 31415297,
+      address: addr,
+      topics: [
+        "0xfe0ff3ebd717d5c975cba5a8a1399a5530971996633841ff78361df170f67d1a",
+      ],
+    },
+    (err, event) => {
+      if (err) console.error(err);
+    }
+  );
+  sellNftSubscription
+    .on("data", (event) => {
+      console.log("sellNftSubscription");
+      const params = [
+        /*{type: 'address', name: 'nftContract', indexed: true}, {type: 'uint256', name: 'nftId', indexed: true},*/ {
+          type: "address",
+          name: "from",
+        },
+        { type: "uint256", name: "price" },
+      ];
+      const res = web3.eth.abi.decodeLog(params, event.data, [event.topics]);
+      let seller = res["from"];
+      let price = res["price"];
+
+      let nftContractEvent = web3.eth.abi.decodeParameter(
+        { type: "address", name: "nftContract", indexed: true },
+        event.topics[1]
+      );
+      let nftIdEvent = web3.eth.abi.decodeParameter(
+        { type: "uint256", name: "nftId", indexed: true },
+        event.topics[2]
+      );
+
+      console.log(
+        `from: ${res["from"]}, price: ${res["price"]}, nftId: ${nftIdEvent}, nftContract: ${nftContractEvent}`
+      );
+    })
+    .on("error", console.error);
+}

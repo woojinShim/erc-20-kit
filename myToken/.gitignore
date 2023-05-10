@@ -1,0 +1,9 @@
+node_modules
+coverage
+coverage.json
+.history
+
+#Hardhat files
+cache
+
+.env

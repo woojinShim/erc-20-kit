@@ -1,0 +1,22 @@
+############################ 서버
+
+############################ DB 계정: 
+
+############################ NodeJS
+-- install
+sudo apt-get update
+sudo apt-get install -y curl
+sudo apt install nodejs
+sudo apt install npm
+
+############################ Git
+-- install
+sudo apt install git
+
+############################ PM2
+-- install
+
+############################ NGINX
+-- install
+sudo apt-get update
+sudo apt-get install nginx

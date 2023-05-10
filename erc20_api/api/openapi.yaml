@@ -1,0 +1,120 @@
+openapi: 3.0.3
+info:
+  description: Token - ERC-20 Nodejs Project
+  version: 1.0.0
+  title: ERC-20 Send Token API service.
+  contact:
+    email: cmshim22@gmail.com
+servers:
+  - url: "http://localhost:8080"
+tags:
+  - name: txFee
+    description: Methods to receive estimated transaction fee
+  - name: sendToken
+    description: Methods to send ERC-20
+
+paths:
+  /v1/txFee:
+    post:
+      tags:
+        - txFee
+      summary: Estimated Transaction Fee for Token Transfer
+      description: Dynamic gas rate
+      operationId: txFee
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TxFeeApiResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorTxFeeApiResponse"
+  /v1/sendToken:
+    post:
+      tags:
+        - sendToken
+      summary: Services for Minting and Token Transfer
+      description: Minting and sending tokens to users
+      operationId: sendToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/tokenClaim"
+        required: true
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorApiResponse"
+
+components:
+  schemas:
+    TxFeeApiResponse:
+      type: object
+      title: TxFeeApiResponse
+      properties:
+        txFee:
+          type: string
+      example:
+        resultCode: "0000"
+        resultMessage: "SUCCESS"
+        result:
+          txFee: "1000000000"
+    ErrorTxFeeApiResponse:
+      type: object
+      properties:
+      example:
+        resultCode: "nmb0001"
+        resultMessage: "FAILED"
+        result: {}
+    tokenClaim:
+      type: object
+      title: SendToken details
+      properties:
+        walletAddress:
+          type: string
+        amount:
+          type: string
+      required:
+        - walletAddress
+        - amount
+      example:
+        walletAddress: "0xaB3f03006cb929128522329851456b6DB9368B34"
+        amount: "2"
+    ApiResponse:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+        amount:
+          type: string
+      required:
+        - walletAddress
+        - amount
+      example:
+        resultCode: "0000"
+        resultMessage: "SUCCESS"
+        result:
+          transactionHash: "0xde8e5e033dab6570d28d3f084093f59bdb71b89a1b2f44bb00f1d189a442603d"
+          value: "2.0"
+    ErrorApiResponse:
+      type: object
+      properties:
+      example:
+        resultCode: "nmb0001"
+        resultMessage: "FAILED"
+        result: {}
